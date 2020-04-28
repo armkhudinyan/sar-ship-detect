@@ -2,22 +2,19 @@
 
 Ship detection on radar images using Keras
 
-
 ### Experimental dataset
-========================
 
 `https://www.kaggle.com/c/statoil-iceberg-classifier-challenge/data` 
 
 
-CNN model from the article
-==============================
+## CNN model from the article
+
 
 # Ship Identification and Characterization in Sentinel-1 SAR Images with Multi-Task Deep Learning 
 `<https://doi.org/10.3390/rs11242997>`
 
 
 ### Abstract
-
 
 The monitoring and surveillance of maritime activities are critical issues in both military and civilian 
 fields, including among others fisheries’ monitoring, maritime traffic surveillance, coastal and at-sea 
