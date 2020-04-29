@@ -30,3 +30,6 @@ datasets. We design a multi-task neural network architecture composed of one joi
 connected to three task specific networks, namely for ship detection, classification, and length estimation. 
 The experimental assessment shows that our network provides promising results, with accurate classification 
 and length performance (classification overall accuracy: 97.25%, mean length error: 4.65 m ± 8.55 m).
+
+multi-task architecture for ship detection, classification and 
+![multi-task architecture for ship detection and classification](images/cnn_architecture.png)
