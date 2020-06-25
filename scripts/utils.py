@@ -8,7 +8,9 @@ from matplotlib import patches
 
 
 def im_resize(img, dsize, interpolation):
-    resized = cv2.resize(img, dsize=dsize, interpolation=interpolation) #cv2.INTER_CUBIC #cv2.INTER_NEAREST
+	''' Resize the image with given 2d sizes 
+	and interpolation method: cv2.INTER_CUBIC #cv2.INTER_NEAREST'''
+    resized = cv2.resize(img, dsize=dsize, interpolation=interpolation) 
     return resized
 
 def bbox_draw(im_array_label, im_array_vals=None, dsize=None):
