@@ -1,6 +1,6 @@
 # sar_ship_detect
 
-Ship detection on radar images using Keras
+Ship detection on Synthetic Aperture Radar images using Keras
 
 ### Experimental dataset
 
