@@ -130,3 +130,7 @@ dmypy.json
 
 # VSCode env
 .vscode
+
+.ipynb_checkpoints
+
+.directory
