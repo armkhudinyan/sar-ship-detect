@@ -1,11 +1,54 @@
-"""
-Define functions for data image reshape and visualization
-"""
+# import libraries
 import numpy as np
 import cv2
 from matplotlib import pyplot as plt
 from matplotlib import patches
+from sklearn.model_selection import train_test_split
 
+"""
+Define utilization functions 
+"""
+
+def data_split(data, target, train_size=0.9, valid_size=0.2, scale=False):
+    ''' A stratified data split into train, validation and test.
+        uses target data for stratification.
+    
+    data :   nD array,
+    target : 1d or 2d array,
+    train_size : floating point number from 0 to 1,
+             defines the size of training data compared to the whole data
+    test_size : floating point number from 0 to 1,
+             defines the size of test data compared to the training data
+    scale :  apply scaler on the data,
+             the scaler id from sklearn.preprocessing.StandardScaler'''
+
+    # feature scalling
+    if scale == True:
+        from sklearn.preprocessing import StandardScaler
+        sc = StandardScaler()
+
+        scaled_bands = []
+        for band in range(data.shape[3]):
+            band_array = data[:, :, :, band]
+
+            scaled_band = sc.fit_transform(band_array.reshape(
+                band_array.shape[0], -1).T).T.reshape(band_array.shape)
+            scaled_bands.append(scaled_band[:, :, :, np.newaxis])
+
+        data = np.concatenate(scaled_bands, axis=-1)
+
+    # split data to get the initial training test split
+    X_train, X_test, y_train, y_test = train_test_split(data, target, random_state=1,
+                                                        train_size=train_size, stratify=target)
+
+    # split data to get train validation split
+    X_train_cv, X_valid, y_train_cv, y_valid = train_test_split(X_train, y_train, random_state=1,
+                                                                test_size=valid_size, stratify=y_train)
+
+    print(
+        f'data split: \nTrain: \t   {X_train_cv.shape[0]} \nValidation: {X_valid.shape[0]} \nTest: \t    {X_test.shape[0]}')
+
+    return X_train_cv, X_valid, X_test, y_train_cv, y_valid, y_test
 
 def im_resize(img, dsize, interpolation):
     ''' Resize the image with given 2d sizes 
@@ -14,7 +57,10 @@ def im_resize(img, dsize, interpolation):
     return resized
 
 def bbox_draw(im_array_label, im_array_vals=None, dsize=None):
-    '''Draw rectangle box around the detected ship''' 
+    '''Draw rectangle box around the detected ship
+    
+    NOTE:  works if there is a single object detected on the image
+           otherwhise it it draws a box including all the objects''' 
     
 	# define 2d image sizes
     if dsize is None:
@@ -79,3 +125,26 @@ def bbox_draw(im_array_label, im_array_vals=None, dsize=None):
         # Add the patch to the Axes
         ax.add_patch(rect)
         plt.show()
+
+def model_history_plot(history, save=False):
+    fig = plt.figure()
+
+    plt.plot(history.history['accuracy'])
+    plt.plot(history.history['val_accuracy'])
+    plt.title('model accuracy')
+    plt.ylabel('accuracy')
+    plt.xlabel('epoch')
+    plt.legend(['train', 'test'], loc='upper left')
+    plt.show()
+    if save == True:
+        fig.savefig('model_accuracy.png')
+
+    plt.plot(history.history['val_loss'])
+    plt.plot(history.history['loss'])
+    plt.title('model loss')
+    plt.ylabel('loss')
+    plt.xlabel('epoch')
+    plt.legend(['train', 'test'], loc='upper left')
+    plt.show()
+    if save == True:
+        fig.savefig('model_loss.png')
