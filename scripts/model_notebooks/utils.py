@@ -17,8 +17,8 @@ def data_split(data, target, train_size=0.9, valid_size=0.2, scale=False):
     target : 1d or 2d array,
     train_size : floating point number from 0 to 1,
              defines the size of training data compared to the whole data
-    test_size : floating point number from 0 to 1,
-             defines the size of test data compared to the training data
+    valid_size : floating point number from 0 to 1,
+             defines the size of validation data compared to the training data
     scale :  apply scaler on the data,
              the scaler id from sklearn.preprocessing.StandardScaler'''
 
@@ -31,8 +31,10 @@ def data_split(data, target, train_size=0.9, valid_size=0.2, scale=False):
         for band in range(data.shape[3]):
             band_array = data[:, :, :, band]
 
-            scaled_band = sc.fit_transform(band_array.reshape(
-                band_array.shape[0], -1).T).T.reshape(band_array.shape)
+            scaled_band = sc.fit_transform(
+                band_array.reshape(
+                band_array.shape[0], -1).T
+                ).T.reshape(band_array.shape)
             scaled_bands.append(scaled_band[:, :, :, np.newaxis])
 
         data = np.concatenate(scaled_bands, axis=-1)
@@ -148,3 +150,7 @@ def model_history_plot(history, save=False):
     plt.show()
     if save == True:
         fig.savefig('model_loss.png')
+
+# Convert SAR backscattering DN to dB and vice bersa
+natural2dB = lambda natural: np.log10(natural)*10
+dB2natural = lambda dB: 10**(dB/10)
