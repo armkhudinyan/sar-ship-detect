@@ -4,12 +4,14 @@ import cv2
 from matplotlib import pyplot as plt
 from matplotlib import patches
 from sklearn.model_selection import train_test_split
+from scipy.ndimage.filters import uniform_filter
+from scipy.ndimage.measurements import variance
 
 """
 Define utilization functions 
 """
 
-def data_split(data, target, train_size=0.9, valid_size=0.2, scale=False):
+def data_split(data, target, train_size=0.9, valid_size=0.2, scale=None):
     ''' A stratified data split into train, validation and test.
         uses target data for stratification.
     
@@ -17,13 +19,16 @@ def data_split(data, target, train_size=0.9, valid_size=0.2, scale=False):
     target : 1d or 2d array,
     train_size : floating point number from 0 to 1,
              defines the size of training data compared to the whole data
-    test_size : floating point number from 0 to 1,
-             defines the size of test data compared to the training data
-    scale :  apply scaler on the data,
-             the scaler id from sklearn.preprocessing.StandardScaler'''
-
-    # feature scalling
-    if scale == True:
+    valid_size : floating point number from 0 to 1,
+             defines the size of validation data compared to the training data
+             in case when `valid_size` == 0.0 it performs just as skleran `train_test_split`
+    scale :  apply scaler on the data, by default it is None
+             valid inputs are 'StandardScaler' and 'MinMaxScaler'
+    
+    Note :   it returns tuple of 4 elements when `valid_size` == 0.0 and 6 otherwise
+    '''
+    # feature scalling by StandardScaler
+    if scale == 'StandardScaler':
         from sklearn.preprocessing import StandardScaler
         sc = StandardScaler()
 
@@ -37,18 +42,51 @@ def data_split(data, target, train_size=0.9, valid_size=0.2, scale=False):
 
         data = np.concatenate(scaled_bands, axis=-1)
 
-    # split data to get the initial training test split
-    X_train, X_test, y_train, y_test = train_test_split(data, target, random_state=1,
-                                                        train_size=train_size, stratify=target)
+    # feature scalling by MinMaxScaler
+    elif scale == 'MinMaxScaler':
+        from sklearn.preprocessing import MinMaxScaler
+        sc = MinMaxScaler()
 
-    # split data to get train validation split
-    X_train_cv, X_valid, y_train_cv, y_valid = train_test_split(X_train, y_train, random_state=1,
-                                                                test_size=valid_size, stratify=y_train)
+        scaled_bands = []
+        for band in range(data.shape[3]):
+            band_array = data[:, :, :, band]
 
-    print(
-        f'data split: \nTrain: \t   {X_train_cv.shape[0]} \nValidation: {X_valid.shape[0]} \nTest: \t    {X_test.shape[0]}')
+            scaled_band = sc.fit_transform(band_array.reshape(
+                band_array.shape[0], -1).T).T.reshape(band_array.shape)
+            scaled_bands.append(scaled_band[:, :, :, np.newaxis])
 
-    return X_train_cv, X_valid, X_test, y_train_cv, y_valid, y_test
+        data = np.concatenate(scaled_bands, axis=-1)
+
+    elif scale == None:
+        pass
+
+    else:
+        raise ValueError(
+            "Wrong input for scaler. Should be 'StandardScaler', 'MinMaxScaler' or None ")
+
+
+    if valid_size == 0.0:
+        # split data to get the initial training test split
+        X_train_cv, X_test, y_train_cv, y_test = train_test_split(data, target, random_state=1,
+                                                                  train_size=train_size, stratify=target)
+        out = X_train_cv, X_test, y_train_cv, y_test
+        print(
+            f'data split: \nTrain_CV:  {X_train_cv.shape[0]} \nTest: \t    {X_test.shape[0]}')
+
+    else:
+
+        # split data to get the initial training test split
+        X_train_cv, X_test, y_train_cv, y_test = train_test_split(data, target, random_state=1,
+                                                                  train_size=train_size, stratify=target)
+
+        # split data to get train validation split
+        X_train, X_valid, y_train, y_valid = train_test_split(X_train_cv, y_train_cv, random_state=1,
+                                                              test_size=valid_size, stratify=y_train_cv)
+        out = X_train, X_valid, X_test, y_train, y_valid, y_test
+        print(
+            f'data split: \nTrain: \t   {X_train.shape[0]} \nValidation: {X_valid.shape[0]} \nTest: \t    {X_test.shape[0]}')
+
+    return out
 
 def im_resize(img, dsize, interpolation):
     ''' Resize the image with given 2d sizes 
@@ -148,3 +186,31 @@ def model_history_plot(history, save=False):
     plt.show()
     if save == True:
         fig.savefig('model_loss.png')
+
+# Convert SAR backscattering DN to dB and vice bersa
+natural2dB = lambda natural: np.log10(natural)*10
+dB2natural = lambda dB: 10**(dB/10)
+
+def lee_filter(img, size):
+    '''
+    Applies Lee Filter
+
+    Parameters
+    ----------
+    img : array-like, image to apply filter on
+    size : integer,
+           The sizes of the uniform filter are given for each axis
+    Returns
+    -------
+    Filtered array. Has the same shape as `input`.
+    '''
+    img_mean = uniform_filter(img, (size, size))
+    img_sqr_mean = uniform_filter(img**2, (size, size))
+    img_variance = img_sqr_mean - img_mean**2
+
+    overall_variance = variance(img)
+
+    img_weights = img_variance**2 / (img_variance**2 + overall_variance**2)
+    img_output = img_mean + img_weights * (img - img_mean)
+
+    return img_output
