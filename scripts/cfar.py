@@ -1,41 +1,7 @@
 import numpy as np
+from scipy import signal
 
-def detect_peaks(x, num_train, num_guard, rate_fa):
-    """
-    Detect peaks with CFAR algorithm.
-    https://tsaith.github.io/detect-peaks-with-cfar-algorithm.html
-
-    num_train: Number of training cells.
-    num_guard: Number of guard cells.
-    rate_fa: False alarm rate. 
-    """
-    num_cells = x.size
-    num_train_half = round(num_train / 2)
-    num_guard_half = round(num_guard / 2)
-    num_side = num_train_half + num_guard_half
-
-    alpha = num_train*(rate_fa**(-1/num_train) - 1)  # threshold factor
-
-    peak_idx = []
-    for i in range(num_side, num_cells - num_side):
-
-        if i != i-num_side+np.argmax(x[i-num_side:i+num_side+1]):
-            continue
-
-        sum1 = np.sum(x[i-num_side:i+num_side+1])
-        sum2 = np.sum(x[i-num_guard_half:i+num_guard_half+1])
-        p_noise = (sum1 - sum2) / num_train
-        threshold = alpha * p_noise
-
-        if x[i] > threshold:
-            peak_idx.append(i)
-
-    peak_idx = np.array(peak_idx, dtype=int)
-
-    return peak_idx
-
-
-def CA_CFAR(rd_matrix, win_param, P_fa):
+def CA_CFAR_naive(rd_matrix, win_param, P_fa):
     '''
     Cell Averaging - Constant False Alarm Rate algorithm
 
@@ -78,5 +44,53 @@ def CA_CFAR(rd_matrix, win_param, P_fa):
 
             if rd_matrix[j, i] > Threshold:
                 hit_matrix[j, i] = 1
+
+    return hit_matrix
+
+def CA_CFAR(rd_matrix, win_param, P_fa=10e-4):
+    """
+    Description:
+    ------------
+        Cell Averaging - Constant False Alarm Rate algorithm
+        Performs an automatic detection on the input range-Doppler matrix with an adaptive thresholding.
+
+        Implem. based on https://www.jku.at/fileadmin/gruppen/183/Docs/Finished_Theses/Bachelor_Thesis_Katzlberger_final.pdf
+    ---------------------
+    Parameters:
+    -----------
+    rd_matrix : range-Doppler matrix (sigma or gamma naught data)
+    win_param : Parameters of the noise power estimation window
+                    [Est. window length, Est. window width, Guard window length, Guard window width]
+    P_fa : Probability of a false-alarm 
+    
+    Returns:
+    --------
+           Calculated hit matrix
+    """
+    # Set inital parameters
+    win_width = win_param[0]
+    win_height = win_param[1]
+    guard_width = win_param[2]
+    guard_height = win_param[3]
+
+    # Create window mask with guard cells
+    mask = np.ones((2 * win_height + 1, 2 * win_width + 1), dtype=bool)
+    mask[win_height - guard_height:win_height + 1 + guard_height,
+         win_width - guard_width:win_width + 1 + guard_width] = 0
+
+    # Number cells within window around CUT; used for averaging operation.
+    num_valid_cells_in_window = signal.convolve2d(
+        np.ones(rd_matrix.shape, dtype=float), mask, mode='same')
+
+    # Calculate scaling factor of threshold with false alarm probability (P_fa)
+    def alpha(num_train): return num_train*(P_fa**(-1/num_train) - 1)
+    # scaling factor of threshold (aka alpha)
+    scaling_factor_in_window = alpha(num_valid_cells_in_window)
+
+    # Perform detection
+    rd_windowed_sum = signal.convolve2d(rd_matrix, mask, mode='same')
+    rd_avg_noise_power = rd_windowed_sum / num_valid_cells_in_window
+    threshold = scaling_factor_in_window * rd_avg_noise_power  # threshold value
+    hit_matrix = rd_matrix > threshold
 
     return hit_matrix
