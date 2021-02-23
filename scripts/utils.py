@@ -11,6 +11,38 @@ from scipy.ndimage.measurements import variance
 Define utilization functions 
 """
 
+
+def data_extractor_from_df(data_frame, dict_key, size=None):
+    """
+    Extract data from json file and 
+    transform it as ndarray
+    
+    Params
+    ------
+    data_frame : deep learn dataset loaded from .json file
+    dict_key : the key for extracting data from dictionary
+    size : tuple, 
+        image dims for recovering 'incidence' angle as an image
+    """
+    #dict_key: should be text
+
+    list_of_bands = []
+    for i in range(data_frame.shape[1]):
+        single_arr = data_frame[i][0][dict_key]
+
+        # we need to recover the incidence angle as a band image
+        if dict_key == 'incidenceangle':
+            if size is None:
+                raise ValueError(
+                    "Image size for `Incidence` angle band needs to be defined")
+            band = np.full(size, single_arr)
+        else:
+            band = single_arr
+
+        list_of_bands.append(band)
+
+    return np.array(list_of_bands)
+
 def data_split(data, target, train_size=0.9, valid_size=0.2, scale=None):
     ''' A stratified data split into train, validation and test.
         uses target data for stratification.
@@ -123,7 +155,8 @@ def bbox_draw(im_array_label, im_array_vals=None, dsize=None):
     
     if im_array_vals is not None:
         # resize the images to a given sizes
-        y_pred_resized = im_resize(im_array_vals, dsize, interpolation=cv2.INTER_NEAREST)
+        y_pred_resized = im_resize(im_array_vals.astype(
+            'float32'), dsize, interpolation=cv2.INTER_NEAREST)
         
         # Configure figure ploting
         plt.figure()
@@ -151,7 +184,7 @@ def bbox_draw(im_array_label, im_array_vals=None, dsize=None):
 
         #subplot(r,c) provide the no. of rows and columns
         f, ax = plt.subplots(1, figsize=(5,5)) 
-        ax.imshow(y_pred_label_resized,cmap="gray")
+        ax.imshow(y_pred_label_resized, cmap="gray")
         ax.set_title('bbox around the predicted ship')
 
         # Create a Rectangle patch
