@@ -11,8 +11,7 @@ from scipy.ndimage.measurements import variance
 Define utilization functions 
 """
 
-
-def data_extractor_from_df(data_frame, dict_key, size=None):
+def data_extractor(data_frame, dict_key, size=None):
     """
     Extract data from json file and 
     transform it as ndarray
@@ -139,7 +138,8 @@ def bbox_draw(im_array_label, im_array_vals=None, dsize=None):
         pass
 	
     # resize the images to a given sizes
-    y_pred_label_resized =  im_resize(im_array_label, dsize, interpolation=cv2.INTER_NEAREST)
+    y_pred_label_resized = im_resize(im_array_label.astype(
+        'float32'), dsize, interpolation=cv2.INTER_NEAREST)
     
     # get figure bounding parameters 
     indx = np.argwhere(y_pred_label_resized==1)
