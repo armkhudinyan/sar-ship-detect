@@ -42,7 +42,7 @@ def data_extractor(data_frame, dict_key, size=None):
 
     return np.array(list_of_bands)
 
-def data_split(data, target, train_size=0.9, valid_size=0.2, scale=None):
+def data_split(data, target, train_size=0.9, valid_size=0.2, scale=None, stratify=False):
     ''' A stratified data split into train, validation and test.
         uses target data for stratification.
     
@@ -95,11 +95,14 @@ def data_split(data, target, train_size=0.9, valid_size=0.2, scale=None):
         raise ValueError(
             "Wrong input for scaler. Should be 'StandardScaler', 'MinMaxScaler' or None ")
 
-
     if valid_size == 0.0:
         # split data to get the initial training test split
-        X_train_cv, X_test, y_train_cv, y_test = train_test_split(data, target, random_state=1,
-                                                                  train_size=train_size, stratify=target)
+        if stratify == True:
+            X_train_cv, X_test, y_train_cv, y_test = train_test_split(data, target, random_state=1,
+                                                                      train_size=train_size, stratify=target)
+        else:
+            X_train_cv, X_test, y_train_cv, y_test = train_test_split(data, target, random_state=1,
+                                                                      train_size=train_size)
         out = X_train_cv, X_test, y_train_cv, y_test
         print(
             f'data split: \nTrain_CV:  {X_train_cv.shape[0]} \nTest: \t    {X_test.shape[0]}')
@@ -107,15 +110,24 @@ def data_split(data, target, train_size=0.9, valid_size=0.2, scale=None):
     else:
 
         # split data to get the initial training test split
-        X_train_cv, X_test, y_train_cv, y_test = train_test_split(data, target, random_state=1,
-                                                                  train_size=train_size, stratify=target)
+        if stratify == True:
+            X_train_cv, X_test, y_train_cv, y_test = train_test_split(data, target, random_state=1,
+                                                                      train_size=train_size, stratify=target)
+            # split data to get train validation split
+            X_train, X_valid, y_train, y_valid = train_test_split(X_train_cv, y_train_cv, random_state=1,
+                                                                  test_size=valid_size, stratify=y_train_cv)
+            out = X_train, X_valid, X_test, y_train, y_valid, y_test
 
-        # split data to get train validation split
-        X_train, X_valid, y_train, y_valid = train_test_split(X_train_cv, y_train_cv, random_state=1,
-                                                              test_size=valid_size, stratify=y_train_cv)
-        out = X_train, X_valid, X_test, y_train, y_valid, y_test
-        print(
-            f'data split: \nTrain: \t   {X_train.shape[0]} \nValidation: {X_valid.shape[0]} \nTest: \t    {X_test.shape[0]}')
+        else:
+            X_train_cv, X_test, y_train_cv, y_test = train_test_split(data, target, random_state=1,
+                                                                      train_size=train_size)
+            # split data to get train validation split
+            X_train, X_valid, y_train, y_valid = train_test_split(X_train_cv, y_train_cv, random_state=1,
+                                                                  test_size=valid_size)
+            out = X_train, X_valid, X_test, y_train, y_valid, y_test
+
+    print(
+        f'data split: \nTrain: \t   {X_train.shape[0]} \nValidation: {X_valid.shape[0]} \nTest: \t    {X_test.shape[0]}')
 
     return out
 
