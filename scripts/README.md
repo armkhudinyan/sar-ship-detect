@@ -8,3 +8,4 @@
 `scipy==1.4.1`\
 `tensorflow==2.0.0`\
 `h5py==2.10.0`
+`sklearn`

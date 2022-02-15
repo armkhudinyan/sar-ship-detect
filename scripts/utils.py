@@ -42,6 +42,7 @@ def data_extractor(data_frame, dict_key, size=None):
 
     return np.array(list_of_bands)
 
+
 def data_split(data, target, train_size=0.9, valid_size=0.2, scale=None, stratify=False):
     ''' A stratified data split into train, validation and test.
         uses target data for stratification.
@@ -130,6 +131,21 @@ def data_split(data, target, train_size=0.9, valid_size=0.2, scale=None, stratif
         f'data split: \nTrain: \t   {X_train.shape[0]} \nValidation: {X_valid.shape[0]} \nTest: \t    {X_test.shape[0]}')
 
     return out
+
+
+def simple_data_split(data, target, train_size, valid_size): 
+    ''' Train-validation-test split'''
+
+    # split data to get the initial training test split
+    X_train, X_test, y_train, y_test = train_test_split(data, target, random_state=1, 
+                                                train_size=train_size, stratify = target)
+    
+    # split data to get train validation split
+    X_train_cv, X_valid, y_train_cv, y_valid = train_test_split( X_train, y_train, random_state=1,
+                                                test_size=valid_size, stratify=y_train) 
+    
+    return  np.array(X_train_cv), np.array(X_valid), np.array(X_test), np.array(y_train_cv), np.array(y_valid), np.array(y_test)
+
 
 def im_resize(img, dsize, interpolation):
     ''' Resize the image with given 2d sizes 
