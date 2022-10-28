@@ -1,0 +1,6 @@
+[submodule "sar_product"]
+	path = scripts/sar_product
+	url = ssh://git@sarpfbak:10022/processing/sar-metadata.git
+[submodule "scripts/util"]
+	path = scripts/util
+	url = ssh://git@sarpfbak:10022/processing/processing_utils.git

@@ -1,5 +1,7 @@
+from typing import Tuple
 import numpy as np
 from scipy import signal
+
 
 def CA_CFAR_naive(rd_matrix, win_param, P_fa):
     '''
@@ -25,7 +27,8 @@ def CA_CFAR_naive(rd_matrix, win_param, P_fa):
     # Generate window mask
     rd_block = np.zeros((2 * win_width + 1, 2 * win_len + 1), dtype=float)
     mask = np.ones((2 * win_width + 1, 2 * win_len + 1))
-    mask[win_width - guard_width:win_width + 1 + guard_width, win_len - guard_len:win_len + 1 + guard_len] = np.zeros(
+    mask[win_width - guard_width : win_width + 1 + guard_width, 
+         win_len - guard_len : win_len + 1 + guard_len] = np.zeros(
         (guard_width * 2 + 1, guard_len * 2 + 1))
 
     # number of training cells
@@ -47,7 +50,8 @@ def CA_CFAR_naive(rd_matrix, win_param, P_fa):
 
     return hit_matrix
 
-def CA_CFAR(rd_matrix, win_param, P_fa=10e-4):
+
+def CA_CFAR(image_matrix: np.ndarray, win_param: Tuple[int, int, int, int], P_fa: float=10e-4):
     """
     Description:
     ------------
@@ -58,7 +62,7 @@ def CA_CFAR(rd_matrix, win_param, P_fa=10e-4):
     ---------------------
     Parameters:
     -----------
-    rd_matrix : range-Doppler matrix (sigma or gamma naught data)
+    image_matrix : range-Doppler matrix (sigma or gamma naught data)
     win_param : Parameters of the noise power estimation window
                     [Est. window length, Est. window width, Guard window length, Guard window width]
     P_fa : Probability of a false-alarm 
@@ -68,10 +72,7 @@ def CA_CFAR(rd_matrix, win_param, P_fa=10e-4):
            Calculated hit matrix
     """
     # Set inital parameters
-    win_width = win_param[0]
-    win_height = win_param[1]
-    guard_width = win_param[2]
-    guard_height = win_param[3]
+    win_width, win_height, guard_width, guard_height = win_param
 
     # Create window mask with guard cells
     mask = np.ones((2 * win_height + 1, 2 * win_width + 1), dtype=bool)
@@ -80,17 +81,18 @@ def CA_CFAR(rd_matrix, win_param, P_fa=10e-4):
 
     # Number cells within window around CUT; used for averaging operation.
     num_valid_cells_in_window = signal.convolve2d(
-        np.ones(rd_matrix.shape, dtype=float), mask, mode='same')
+        np.ones(image_matrix.shape, dtype=float), mask, mode='same')
 
     # Calculate scaling factor of threshold with false alarm probability (P_fa)
     def alpha(num_train): return num_train*(P_fa**(-1/num_train) - 1)
-    # scaling factor of threshold (aka alpha)
+    # scaling factor of threshold (aka Alpha)
     scaling_factor_in_window = alpha(num_valid_cells_in_window)
 
+    # Calculate window average statistics (aka Z)
+    rd_windowed_sum = signal.convolve2d(image_matrix, mask, mode='same')
+    rd_avg_noise_power = rd_windowed_sum / num_valid_cells_in_window #(aka T)
     # Perform detection
-    rd_windowed_sum = signal.convolve2d(rd_matrix, mask, mode='same')
-    rd_avg_noise_power = rd_windowed_sum / num_valid_cells_in_window
-    threshold = scaling_factor_in_window * rd_avg_noise_power  # threshold value
-    hit_matrix = rd_matrix > threshold
+    # threshold = scaling_factor_in_window * rd_avg_noise_power  # (aka T=Z*alpha)
+    hit_matrix = image_matrix > scaling_factor_in_window * rd_avg_noise_power
 
     return hit_matrix
