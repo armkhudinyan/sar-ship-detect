@@ -4,6 +4,9 @@ images/
 materials/
 model_weights/
 
+# Pytorch-lightning logs
+lightning_logs/
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
