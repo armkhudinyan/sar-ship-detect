@@ -1,10 +1,15 @@
 from pathlib import Path
-from typing import Tuple
+from typing import List, Tuple
+import rasterio as rio
 from rasterio.io import DatasetReader
 from rasterio.crs import CRS
+from rasterio.features import shapes
 from rasterio import Affine
-import rasterio as rio
 from numpy import ndarray
+from shapely.geometry import shape
+from geopandas import GeoDataFrame, GeoSeries
+from matplotlib import pyplot as plt
+import pandas as pd
 
 
 def write_tif(raster_array: ndarray, src: DatasetReader, transform: Affine, 
@@ -71,3 +76,66 @@ def GCPs2GeoTransform(src: DatasetReader, scale_factor: float=1,
         raise ValueError("Wrong input for 'gt_style', use 'Affine' or 'GDAL'")
     crs = src.get_gcps()[1]
     return transform, crs
+
+
+def plot_gcps(GCPs: List) -> None:
+    '''
+    Plot GCPs extracted with rasterio.get_gcps()
+    '''
+    row_id = []
+    col_id = []
+    gcps_x = []
+    gcps_y = []
+
+    for i in range(len(GCPs)):
+        row_id.append(GCPs[i].row)
+        col_id.append(GCPs[i].col)
+        gcps_x.append(GCPs[i].x)
+        gcps_y.append(GCPs[i].y)
+        
+    df = pd.DataFrame([row_id, col_id, gcps_x, gcps_y]).T
+    df.columns = ['row', 'col', 'x', 'y']                        # type: ignore
+    
+    fig = plt.figure()
+    ax1 = fig.add_subplot(111)
+
+    ax1.scatter(df.x, df.y, s=20, c='b', marker="s", label='GCPs') # type: ignore
+    ax1.scatter(df.x[0],df.y[0], s=30, c='r', marker="o", label='first') # type: ignore
+    plt.legend(loc='upper left');
+    plt.show()
+
+
+def raster2shape(segmented_map: ndarray, dest: Path, affine: Affine) -> None:
+    geometries = [
+            {'properties': {'raster_val': v}, 'geometry': polygons}
+            for polygons, v
+            in shapes(
+                segmented_map.astype('uint8'), 
+                mask=segmented_map!=0, 
+                transform=affine)]
+
+    # geometries = list(vectorized)
+    # _imageCoord_to_lonLat(transform, geometries) # geographic geometries
+
+    crs = 'EPSG:4326'
+    # Vector analysis with geopanda
+    gpSeries = GeoSeries(
+        [shape(geom['geometry']) 
+        for geom in geometries])
+    gpDFrame = GeoDataFrame.from_features(gpSeries.geometry, crs=crs)
+    # write shapefile
+    gpDFrame.to_file(dest, driver ='ESRI Shapefile')
+
+
+def _imageCoord_to_lonLat(transform, geometries):
+    '''
+    Applies/transforms the coordinates of polygon geometries
+    '''
+    for geom in geometries:
+        for polygon in geom['geometry']['coordinates']:
+            for i, col_row in enumerate(polygon):
+                polygon[i] = _colRow_to_lonLat(transform, *col_row)
+
+
+def _colRow_to_lonLat(transform, col, row):
+    return  (rio.transform.xy(transform, col, row))  # type: ignore
