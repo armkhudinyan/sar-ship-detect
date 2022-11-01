@@ -1,5 +1,5 @@
 from pathlib import Path
-from typing import List, Tuple
+from typing import List, Optional, Tuple
 import rasterio as rio
 from rasterio.io import DatasetReader
 from rasterio.crs import CRS
@@ -127,15 +127,21 @@ def raster2shape(segmented_map: ndarray, dest: Path, affine: Affine) -> None:
     gpDFrame.to_file(dest, driver ='ESRI Shapefile')
 
 
-def _imageCoord_to_lonLat(transform, geometries):
+def _imageCoord_to_lonLat(transform: Affine, geometries: List):
     '''
     Applies/transforms the coordinates of polygon geometries
     '''
     for geom in geometries:
         for polygon in geom['geometry']['coordinates']:
             for i, col_row in enumerate(polygon):
-                polygon[i] = _colRow_to_lonLat(transform, *col_row)
+                polygon[i] = colRow_to_lonLat(transform, *col_row)
 
 
-def _colRow_to_lonLat(transform, col, row):
-    return  (rio.transform.xy(transform, col, row))  # type: ignore
+def colRow_to_lonLat(transform: Affine, 
+                     col_row: Optional[Tuple[int,float]]) -> Tuple[float,float]:
+    return  (rio.transform.xy(transform, *col_row))  # type: ignore
+
+
+def lonLat_to_colRow(transform: Affine, 
+                     col_row: Optional[Tuple[int,float]]) -> Tuple[int,int]:
+    return  (rio.transform.rowcol(transform, *col_row))  # type: ignore
