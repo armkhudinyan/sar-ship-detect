@@ -1,3 +1,7 @@
+# products
+assets/products/*.zip
+assets/products/*.SAFE
+
 # Folders included from old versions of the repo (no longer used)
 data/
 images/
