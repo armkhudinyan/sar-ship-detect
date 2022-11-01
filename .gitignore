@@ -1,3 +1,16 @@
+# products
+assets/products/*.zip
+assets/products/*.SAFE
+
+# Folders included from old versions of the repo (no longer used)
+data/
+images/
+materials/
+model_weights/
+
+# Pytorch-lightning logs
+lightning_logs/
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
